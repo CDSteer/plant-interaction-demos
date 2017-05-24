@@ -5,7 +5,7 @@ public class Particle {
   float g;
   float b;
   int elSize;
-  int lifeTime = 50;
+  int lifeTime = 10;
   
   public Particle(float x, float y) {
     position = new PVector(random(x,x+140), 89);
@@ -34,12 +34,12 @@ public class Particle {
   }
 
   void gravity() {
-    speed.y += .000000005;
-    speed.x += .000000001;
+    speed.y += .00005;
+    speed.x += .00001;
     position.add(speed);
   }
   
-  public void live(){
+   public void live(){
     lifeTime--;
   }
   

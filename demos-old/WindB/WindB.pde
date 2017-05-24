@@ -102,5 +102,3 @@ boolean isCollidingCircleRectangle(
 
   return (cornerDistance_sq <= pow(radius,2));
 }
-
-

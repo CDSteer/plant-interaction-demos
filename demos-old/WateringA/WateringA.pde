@@ -70,8 +70,8 @@ void setup() {
   
   sunflowerCX = 750; 
   sunflowerCY = 550;
-  // println(Serial.list());
-  g_serial = new Serial(this, Serial.list()[1], 115200, 'N', 8, 1.0);
+  println(Serial.list());
+  g_serial = new Serial(this, "/dev/tty.usbmodem1411", 115200, 'N', 8, 1.0);
   g_font = loadFont("ArialMT-20.vlw");
   textFont(g_font, 20);
 

@@ -1,3 +1,24 @@
+import processing.core.*; 
+import processing.data.*; 
+import processing.event.*; 
+import processing.opengl.*; 
+
+import processing.serial.*; 
+import processing.opengl.*; 
+import java.util.ArrayList; 
+import java.util.List; 
+
+import java.util.HashMap; 
+import java.util.ArrayList; 
+import java.io.File; 
+import java.io.BufferedReader; 
+import java.io.PrintWriter; 
+import java.io.InputStream; 
+import java.io.OutputStream; 
+import java.io.IOException; 
+
+public class Wind extends PApplet {
+
 // Maurice Ribble
 // 6-28-2009
 // http://www.glacialwanderer.com/hobbyrobotics
@@ -10,23 +31,11 @@
 
 //Edited by Cameron Steer
 
-import processing.serial.*;
-import processing.opengl.*;
 
-import java.util.ArrayList;
-import java.util.List;
 
-boolean cali = true;
-int caliX1, caliX2, caliY1, caliY2;
 
-PImage sunflower, cloud;
 
-int rainNum = 50;
-//ArrayList rain = new ArrayList();
-List<Rain> rain = new ArrayList<Rain>(50);
-ArrayList splash = new ArrayList();
-float current;
-float reseed = random(0,.2);
+
 
 // Globals
 int g_winW             = 1000;   // Window Width
@@ -45,149 +54,72 @@ Serial g_serial;
 PFont  g_font;
 
 float x, y;
-float waterLvl, waterLvl2, waterLvl3;
+float waterLvl;
 boolean isCollision = false;
-
-float sunflowerAX, sunflowerAY;
-float sunflowerBX, sunflowerBY;
-float sunflowerCX, sunflowerCY;
 
 int oldXAccel, oldYAccel;
 int xAccel, yAccel, zAccel, vRef, xRate, yRate;
 
-void setup() {
-  size(1000, 700, P3D);
-  cloud = loadImage("rec/cloud.png");
-  sunflower = loadImage("rec/sunflower.png");
+List<Particle> particle = new ArrayList<Particle>(50);
+float current;
+float reseed = random(0,.2f);
+
+public void setup() {
+  size(g_winW, g_winH, P3D);
   x =  g_winW/2;
   y =  10;
   noStroke();
-  sunflowerAX = 100; 
-  sunflowerAY = 550;
-  
-  sunflowerBX = 400; 
-  sunflowerBY = 550;
-  
-  sunflowerCX = 750; 
-  sunflowerCY = 550;
-  // println(Serial.list());
-  g_serial = new Serial(this, Serial.list()[1], 115200, 'N', 8, 1.0);
-  g_font = loadFont("ArialMT-20.vlw");
-  textFont(g_font, 20);
+  println(Serial.list());
+  g_serial = new Serial(this, "/dev/tty.usbmodem1421", 115200, 'N', 8, 1.0f);
+  //textFont(g_font, 20);
+
+  // This draws the graph key info
+  strokeWeight(1.5f);
+  stroke(255, 0, 0);     line(20, 420, 35, 420);
+  stroke(0, 255, 0);     line(20, 440, 35, 440);
+  stroke(0, 0, 255);     line(20, 460, 35, 460);
+  //stroke(255, 255, 0);   line(20, 480, 35, 480);
+  //stroke(255, 0, 255);   line(20, 500, 35, 500);
+  //stroke(0, 255, 255);   line(20, 520, 35, 520);
+  fill(0, 0, 0);
+  //text("xAccel", 40, 430);
+  //text("yAccel", 40, 450);
+  //text("zAccel", 40, 470);
+  //text("vRef", 40, 490);
+  //text("xRate", 40, 510);
+  //text("yRate", 40, 530);
 
   colorMode(RGB,100);
   background(0);
-  rain.add(new Rain(x, y));
-  current = millis();
 }
 
-void draw(){
+public void draw(){
   background(0);
   blur(50);
-  image(cloud, x, y);
-  image(sunflower, sunflowerAX, sunflowerAY);
-  image(sunflower, sunflowerBX, sunflowerBY);
-  image(sunflower, sunflowerCX, sunflowerCY);
 
-  if ((millis()-current)/1000>reseed&&rain.size()<150) {
-    rain.add(new Rain(x,y));
-    reseed = random(0,.2);
+  if ((millis()-current)/1000>reseed&&particle.size()<150) {
+    particle.add(new Particle(x,y));
+    reseed = random(0,.2f);
     current = millis();
   }
 
-  for (int i=0 ; i<rain.size() ; i++) {
-    Rain rainT = (Rain)rain.get(i);
-    rainT.calculate();
-    rainT.draw();
-    if (rainT.position.y>height) {
-      for (int k = 0 ; k<random(5,10); k++) {
-        splash.add(new Splash(rainT.position.x,height));
-      }
-      rain.remove(i);
-      float rand = random(0,100);
-      if (rand>10&&rain.size()<150)
-      rain.add(new Rain(x,y));
-    }
+  for (int i=0 ; i<particle.size() ; i++) {
+    Particle particleT = (Particle)particle.get(i);
+    particleT.calculate(xAccel, yAccel);
+    particleT.draw();
   }
 
-  fill(255, 255, 255);
-  rect(70, 700, 20, -155);
-  rect(350, 700, 20, -155);
-  rect(700, 700, 20, -155);
-
-  for (Rain rainT : rain) {
-    if (rainT.position.y > 540){
-      isCollision = isCollidingCircleRectangle(rainT.position.x, rainT.position.y, 5, sunflowerAX, sunflowerAY, 116.0, 149.0);
-      if (isCollision == true){
-        if (waterLvl >= -155){
-          waterLvl = waterLvl - .4;
-        }
-      }
-      if (waterLvl > -155){
-        fill(0, 0, 255);
-      } else {
-        fill(0, 255, 0);
-      }
-      rect(70, 700, 20, waterLvl);
-      
-      isCollision = isCollidingCircleRectangle(rainT.position.x, rainT.position.y, 5, sunflowerBX, sunflowerBY, 116.0, 149.0);
-      if (isCollision == true){
-        if (waterLvl2 >= -155){
-          waterLvl2 = waterLvl2 - .4;
-        }
-      }
-      if (waterLvl2 > -155){
-        fill(0, 0, 255);
-      } else {
-        fill(0, 255, 0);
-      }
-      rect(350, 700, 20, waterLvl2);
-      
-      isCollision = isCollidingCircleRectangle(rainT.position.x, rainT.position.y, 5, sunflowerCX, sunflowerCY, 116.0, 149.0);
-      if (isCollision == true){
-        if (waterLvl3 >= -155){
-          waterLvl3 = waterLvl3 - .4;
-        }
-      }
-      if (waterLvl3 > -155){
-        fill(0, 0, 255);
-      } else {
-        fill(0, 255, 0);
-      }
-      rect(700, 700, 20, waterLvl3);
-    }
-  }
-  
-
-  if (waterLvl <= 0){
-    waterLvl = waterLvl + .2;
-  }
-  if (waterLvl2 <= 0){
-    waterLvl2 = waterLvl2 + .2;
-  }
-  if (waterLvl3 <= 0){
-    waterLvl3 = waterLvl3 + .2;
-  }
-
-  for (int i=0 ; i<splash.size() ; i++){
-    Splash spl = (Splash) splash.get(i);
-    spl.calculate();
-    spl.draw();
-    if (spl.position.y>height)
-    splash.remove(i);
-  }
-
-  if (xAccel < caliX1 && xAccel < caliX2){
+  if (xAccel < 324 && xAccel < 325){
     x = x - 5;
-  } else if (xAccel > caliX1 && xAccel > caliX2) {
+  } else if (xAccel > 324 && xAccel > 325) {
     x = x + 5;
   }
 
-//  if (yAccel < 330 && yAccel < 331){
-//    y++;
-//  } else if (yAccel > 330 && yAccel > 331) {
-//    y--;
-//  }
+  if (yAccel < 317 && yAccel < 318){
+    y++;
+  } else if (yAccel > 317 && yAccel > 318) {
+    y--;
+  }
 
   // We need to read in all the avilable data so graphing doesn't lag behind
   while (g_serial.available() >= 2*6+2) {
@@ -214,7 +146,7 @@ void draw(){
 }
 
 // This reads in one set of the data from the serial port
-void processSerialData() {
+public void processSerialData() {
   int inByte = 0;
   int curMatchPos = 0;
   int[] intBuf = new int[2];
@@ -269,15 +201,13 @@ void processSerialData() {
     g_serial.readBytes(inBuf);
     yRate  = ((int)(inBuf[1]&0xFF) << 8) + ((int)(inBuf[0]&0xFF) << 0);
 
+    g_xAccel.addVal(xAccel);
+    g_yAccel.addVal(yAccel);
+    g_zAccel.addVal(zAccel);
+    g_vRef.addVal(vRef);
+    g_xRate.addVal(xRate);
+    g_yRate.addVal(yRate);
     System.out.println("X: " + xAccel + " Y: " + yAccel + " Z: " + zAccel);
-    if (cali == true){
-      caliX1 = xAccel;
-      caliX2 = xAccel+1; 
-      caliY1 = yAccel;
-      caliY2 = yAccel+1;
-      cali = false;
-      System.out.println(caliX1 + ", "+ caliY1);
-    }
   }
 }
 
@@ -294,7 +224,7 @@ class cDataArray {
     m_data = new float[maxSize];
   }
 
-  void addVal(float val) {
+  public void addVal(float val) {
 
     if (g_enableFilter && (m_curSize != 0)) {
       int indx;
@@ -304,7 +234,7 @@ class cDataArray {
       else
         indx = m_endIndex - 1;
 
-      m_data[m_endIndex] = getVal(indx)*.5 + val*.5;
+      m_data[m_endIndex] = getVal(indx)*.5f + val*.5f;
     } else {
       m_data[m_endIndex] = val;
     }
@@ -317,20 +247,20 @@ class cDataArray {
     }
   }
 
-  float getVal(int index) {
+  public float getVal(int index) {
     return m_data[(m_startIndex+index)%m_maxSize];
   }
 
-  int getCurSize() {
+  public int getCurSize() {
     return m_curSize;
   }
 
-  int getMaxSize() {
+  public int getMaxSize() {
     return m_maxSize;
   }
 }
 
-void blur(float trans) {
+public void blur(float trans) {
   noStroke();
   fill(0,trans);
   rect(0,0,width,height);
@@ -350,13 +280,13 @@ class cGraph {
     m_gTop       = g_winH - y - h;
   }
 
-  void drawGraphBox() {
+  public void drawGraphBox() {
     stroke(0, 0, 0);
     rectMode(CORNERS);
     rect(m_gLeft, m_gBottom, m_gRight, m_gTop);
   }
 
-  void drawLine(cDataArray data, float minRange, float maxRange) {
+  public void drawLine(cDataArray data, float minRange, float maxRange) {
     float graphMultX = m_gWidth/data.getMaxSize();
     float graphMultY = m_gHeight/(maxRange-minRange);
 
@@ -370,7 +300,7 @@ class cGraph {
   }
 }
 
-boolean isCollidingCircleRectangle(
+public boolean isCollidingCircleRectangle(
       float circleX,
       float circleY,
       float radius,
@@ -392,4 +322,47 @@ boolean isCollidingCircleRectangle(
                        pow(circleDistanceY - rectangleHeight/2, 2);
 
   return (cornerDistance_sq <= pow(radius,2));
+}
+
+
+public class Particle {
+  PVector position,pposition,speed;
+  float col;
+
+  public Particle(float x, float y) {
+    position = new PVector(random(x,x+140), 89);
+    pposition = position;
+    speed = new PVector(0,0);
+    col = random(30,100);
+  }
+
+  public void draw() {
+    stroke(100,col);
+    strokeWeight(2);
+    line(position.x,position.y,pposition.x,pposition.y);
+    ellipse(position.x,position.y,5,5);
+  }
+
+  public void calculate(float xA, float yA) {
+    //position = new PVector(position.x + xA, position.y + yAccel);
+    position.x = position.x + xA/10;
+    position.y = position.y + yA/10;
+    //gravity();
+
+  }
+
+  public void gravity() {
+    speed.y += 1;
+    speed.x += .0001f;
+    position.add(speed);
+  }
+}
+  static public void main(String[] passedArgs) {
+    String[] appletArgs = new String[] { "Wind" };
+    if (passedArgs != null) {
+      PApplet.main(concat(appletArgs, passedArgs));
+    } else {
+      PApplet.main(appletArgs);
+    }
+  }
 }

@@ -8,25 +8,9 @@
 // I wrote an arduino app that sends data in the format expected by this app.
 // The arduino app sends accelerometer and gyroscope data.
 
-//Edited by Cameron Steer
-
 import processing.serial.*;
 import processing.opengl.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
-boolean cali = true;
-int caliX1, caliX2, caliY1, caliY2;
-
-PImage sunflower, cloud;
-
-int rainNum = 50;
-//ArrayList rain = new ArrayList();
-List<Rain> rain = new ArrayList<Rain>(50);
-ArrayList splash = new ArrayList();
-float current;
-float reseed = random(0,.2);
 
 // Globals
 int g_winW             = 1000;   // Window Width
@@ -44,150 +28,39 @@ cGraph g_graph         = new cGraph(10, 190, 800, 400);
 Serial g_serial;
 PFont  g_font;
 
-float x, y;
-float waterLvl, waterLvl2, waterLvl3;
-boolean isCollision = false;
-
-float sunflowerAX, sunflowerAY;
-float sunflowerBX, sunflowerBY;
-float sunflowerCX, sunflowerCY;
 
 int oldXAccel, oldYAccel;
 int xAccel, yAccel, zAccel, vRef, xRate, yRate;
 
 void setup() {
-  size(1000, 700, P3D);
-  cloud = loadImage("rec/cloud.png");
-  sunflower = loadImage("rec/sunflower.png");
-  x =  g_winW/2;
-  y =  10;
+  size(g_winW, g_winH, P3D);
+
   noStroke();
-  sunflowerAX = 100; 
-  sunflowerAY = 550;
-  
-  sunflowerBX = 400; 
-  sunflowerBY = 550;
-  
-  sunflowerCX = 750; 
-  sunflowerCY = 550;
-  // println(Serial.list());
-  g_serial = new Serial(this, Serial.list()[1], 115200, 'N', 8, 1.0);
+  println(Serial.list());
+  g_serial = new Serial(this, "/dev/tty.usbmodem1421", 115200, 'N', 8, 1.0);
   g_font = loadFont("ArialMT-20.vlw");
   textFont(g_font, 20);
 
-  colorMode(RGB,100);
-  background(0);
-  rain.add(new Rain(x, y));
-  current = millis();
+  // This draws the graph key info
+  strokeWeight(1.5);
+  stroke(255, 0, 0);     line(20, 420, 35, 420);
+  stroke(0, 255, 0);     line(20, 440, 35, 440);
+  stroke(0, 0, 255);     line(20, 460, 35, 460);
+  //stroke(255, 255, 0);   line(20, 480, 35, 480);
+  //stroke(255, 0, 255);   line(20, 500, 35, 500);
+  //stroke(0, 255, 255);   line(20, 520, 35, 520);
+  fill(0, 0, 0);
+  text("xAccel", 40, 430);
+  text("yAccel", 40, 450);
+  text("zAccel", 40, 470);
+  //text("vRef", 40, 490);
+  //text("xRate", 40, 510);
+  //text("yRate", 40, 530);
+
 }
 
 void draw(){
   background(0);
-  blur(50);
-  image(cloud, x, y);
-  image(sunflower, sunflowerAX, sunflowerAY);
-  image(sunflower, sunflowerBX, sunflowerBY);
-  image(sunflower, sunflowerCX, sunflowerCY);
-
-  if ((millis()-current)/1000>reseed&&rain.size()<150) {
-    rain.add(new Rain(x,y));
-    reseed = random(0,.2);
-    current = millis();
-  }
-
-  for (int i=0 ; i<rain.size() ; i++) {
-    Rain rainT = (Rain)rain.get(i);
-    rainT.calculate();
-    rainT.draw();
-    if (rainT.position.y>height) {
-      for (int k = 0 ; k<random(5,10); k++) {
-        splash.add(new Splash(rainT.position.x,height));
-      }
-      rain.remove(i);
-      float rand = random(0,100);
-      if (rand>10&&rain.size()<150)
-      rain.add(new Rain(x,y));
-    }
-  }
-
-  fill(255, 255, 255);
-  rect(70, 700, 20, -155);
-  rect(350, 700, 20, -155);
-  rect(700, 700, 20, -155);
-
-  for (Rain rainT : rain) {
-    if (rainT.position.y > 540){
-      isCollision = isCollidingCircleRectangle(rainT.position.x, rainT.position.y, 5, sunflowerAX, sunflowerAY, 116.0, 149.0);
-      if (isCollision == true){
-        if (waterLvl >= -155){
-          waterLvl = waterLvl - .4;
-        }
-      }
-      if (waterLvl > -155){
-        fill(0, 0, 255);
-      } else {
-        fill(0, 255, 0);
-      }
-      rect(70, 700, 20, waterLvl);
-      
-      isCollision = isCollidingCircleRectangle(rainT.position.x, rainT.position.y, 5, sunflowerBX, sunflowerBY, 116.0, 149.0);
-      if (isCollision == true){
-        if (waterLvl2 >= -155){
-          waterLvl2 = waterLvl2 - .4;
-        }
-      }
-      if (waterLvl2 > -155){
-        fill(0, 0, 255);
-      } else {
-        fill(0, 255, 0);
-      }
-      rect(350, 700, 20, waterLvl2);
-      
-      isCollision = isCollidingCircleRectangle(rainT.position.x, rainT.position.y, 5, sunflowerCX, sunflowerCY, 116.0, 149.0);
-      if (isCollision == true){
-        if (waterLvl3 >= -155){
-          waterLvl3 = waterLvl3 - .4;
-        }
-      }
-      if (waterLvl3 > -155){
-        fill(0, 0, 255);
-      } else {
-        fill(0, 255, 0);
-      }
-      rect(700, 700, 20, waterLvl3);
-    }
-  }
-  
-
-  if (waterLvl <= 0){
-    waterLvl = waterLvl + .2;
-  }
-  if (waterLvl2 <= 0){
-    waterLvl2 = waterLvl2 + .2;
-  }
-  if (waterLvl3 <= 0){
-    waterLvl3 = waterLvl3 + .2;
-  }
-
-  for (int i=0 ; i<splash.size() ; i++){
-    Splash spl = (Splash) splash.get(i);
-    spl.calculate();
-    spl.draw();
-    if (spl.position.y>height)
-    splash.remove(i);
-  }
-
-  if (xAccel < caliX1 && xAccel < caliX2){
-    x = x - 5;
-  } else if (xAccel > caliX1 && xAccel > caliX2) {
-    x = x + 5;
-  }
-
-//  if (yAccel < 330 && yAccel < 331){
-//    y++;
-//  } else if (yAccel > 330 && yAccel > 331) {
-//    y--;
-//  }
 
   // We need to read in all the avilable data so graphing doesn't lag behind
   while (g_serial.available() >= 2*6+2) {
@@ -196,21 +69,21 @@ void draw(){
 
   strokeWeight(1);
   fill(255, 255, 255);
-//  g_graph.drawGraphBox();
-//
-//  strokeWeight(1.5);
-//  stroke(255, 0, 0);
-//  g_graph.drawLine(g_xAccel, 0, 1024);
-//  stroke(0, 255, 0);
-//  g_graph.drawLine(g_yAccel, 0, 1024);
-//  stroke(0, 0, 255);
-//  g_graph.drawLine(g_zAccel, 0, 1024);
-//  stroke(255, 255, 0);
-//  g_graph.drawLine(g_vRef, 0, 1024);
-//  stroke(255, 0, 255);
-//  g_graph.drawLine(g_xRate, 0, 1024);
-//  stroke(0, 255, 255);
-//  g_graph.drawLine(g_yRate, 0, 1024);
+  g_graph.drawGraphBox();
+
+  strokeWeight(1.5);
+  stroke(255, 0, 0);
+  g_graph.drawLine(g_xAccel, 0, 1024);
+  stroke(0, 255, 0);
+  g_graph.drawLine(g_yAccel, 0, 1024);
+  stroke(0, 0, 255);
+  g_graph.drawLine(g_zAccel, 0, 1024);
+  stroke(255, 255, 0);
+  g_graph.drawLine(g_vRef, 0, 1024);
+  stroke(255, 0, 255);
+  g_graph.drawLine(g_xRate, 0, 1024);
+  stroke(0, 255, 255);
+  g_graph.drawLine(g_yRate, 0, 1024);
 }
 
 // This reads in one set of the data from the serial port
@@ -269,15 +142,13 @@ void processSerialData() {
     g_serial.readBytes(inBuf);
     yRate  = ((int)(inBuf[1]&0xFF) << 8) + ((int)(inBuf[0]&0xFF) << 0);
 
+    g_xAccel.addVal(xAccel);
+    g_yAccel.addVal(yAccel);
+    g_zAccel.addVal(zAccel);
+    g_vRef.addVal(vRef);
+    g_xRate.addVal(xRate);
+    g_yRate.addVal(yRate);
     System.out.println("X: " + xAccel + " Y: " + yAccel + " Z: " + zAccel);
-    if (cali == true){
-      caliX1 = xAccel;
-      caliX2 = xAccel+1; 
-      caliY1 = yAccel;
-      caliY2 = yAccel+1;
-      cali = false;
-      System.out.println(caliX1 + ", "+ caliY1);
-    }
   }
 }
 
@@ -330,11 +201,6 @@ class cDataArray {
   }
 }
 
-void blur(float trans) {
-  noStroke();
-  fill(0,trans);
-  rect(0,0,width,height);
-}
 
 // This class takes the data and helps graph it
 class cGraph {
@@ -393,3 +259,5 @@ boolean isCollidingCircleRectangle(
 
   return (cornerDistance_sq <= pow(radius,2));
 }
+
+
